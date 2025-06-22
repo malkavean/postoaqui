@@ -84,17 +84,51 @@ app.get('/api/gas-stations/:id/prices', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-// Adicionar preço
+
+// Adicionar preço com validações
 app.post('/api/prices', async (req, res) => {
     const { gas_station_id, fuel_type, price } = req.body;
 
+    // Validações
+    const errors = [];
+
+    // Preço deve ser número positivo
+    if (!price || isNaN(price) || price <= 0) {
+        errors.push('Preço deve ser um número positivo');
+    }
+
+    // Faixas de preços válidos (em reais)
+    const priceRanges = {
+        'gasolina_comum': { min: 4.50, max: 8.00 },
+        'gasolina_aditivada': { min: 4.80, max: 8.50 },
+        'etanol': { min: 2.50, max: 6.00 },
+        'diesel': { min: 4.00, max: 7.50 }
+    };
+
+    const range = priceRanges[fuel_type];
+    if (range && (price < range.min || price > range.max)) {
+        errors.push(`Preço para ${fuel_type} deve estar entre R$ ${range.min.toFixed(2)} e R$ ${range.max.toFixed(2)}`);
+    }
+
+    // Tipos de combustível válidos
+    const validFuelTypes = ['gasolina_comum', 'gasolina_aditivada', 'etanol', 'diesel'];
+    if (!validFuelTypes.includes(fuel_type)) {
+        errors.push('Tipo de combustível inválido');
+    }
+
+    // Se houver erros, retornar
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+
     try {
         const result = await pool.query(
-            'INSERT INTO prices (gas_station_id, fuel_type, price, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
-            [gas_station_id, fuel_type, price, 1] // user_id = 1 por enquanto
+            'INSERT INTO prices (gas_station_id, fuel_type, price) VALUES ($1, $2, $3) RETURNING *',
+            [gas_station_id, fuel_type, price]
         );
         res.json(result.rows[0]);
     } catch (err) {
+        console.error('Erro SQL:', err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -28,10 +28,55 @@ function PriceForm({ stationId, onPriceAdded }) {
     const [fuelType, setFuelType] = useState('gasolina_comum');
     const [price, setPrice] = useState('');
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState([]);
+
+    // Faixas de preços válidos
+    const priceRanges = {
+        'gasolina_comum': { min: 4.50, max: 8.00 },
+        'gasolina_aditivada': { min: 4.80, max: 8.50 },
+        'etanol': { min: 2.50, max: 6.00 },
+        'diesel': { min: 4.00, max: 7.50 }
+    };
+
+    const validatePrice = (value, fuel) => {
+        const errors = [];
+        const numPrice = parseFloat(value);
+
+        if (!value || isNaN(numPrice) || numPrice <= 0) {
+            errors.push('Digite um preço válido');
+            return errors;
+        }
+
+        const range = priceRanges[fuel];
+        if (numPrice < range.min || numPrice > range.max) {
+            errors.push(`Preço deve estar entre R$ ${range.min.toFixed(2)} e R$ ${range.max.toFixed(2)}`);
+        }
+
+        return errors;
+    };
+
+    const handlePriceChange = (value) => {
+        setPrice(value);
+        const validationErrors = validatePrice(value, fuelType);
+        setErrors(validationErrors);
+    };
+
+    const handleFuelTypeChange = (fuel) => {
+        setFuelType(fuel);
+        if (price) {
+            const validationErrors = validatePrice(price, fuel);
+            setErrors(validationErrors);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!price) return;
+
+        const validationErrors = validatePrice(price, fuelType);
+        if (validationErrors.length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
 
         setLoading(true);
         try {
@@ -42,22 +87,38 @@ function PriceForm({ stationId, onPriceAdded }) {
             });
 
             setPrice('');
+            setErrors([]);
             alert('Preço reportado com sucesso!');
             onPriceAdded(); // Atualizar os preços
         } catch (error) {
             console.error('Erro ao reportar preço:', error);
-            alert('Erro ao reportar preço');
+            if (error.response?.data?.errors) {
+                setErrors(error.response.data.errors);
+            } else {
+                alert('Erro ao reportar preço');
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const currentRange = priceRanges[fuelType];
+
     return (
         <form onSubmit={handleSubmit} className="price-form">
             <h4>Reportar Preço</h4>
+
+            {errors.length > 0 && (
+                <div className="error-messages">
+                    {errors.map((error, index) => (
+                        <p key={index} className="error-message">{error}</p>
+                    ))}
+                </div>
+            )}
+
             <select
                 value={fuelType}
-                onChange={(e) => setFuelType(e.target.value)}
+                onChange={(e) => handleFuelTypeChange(e.target.value)}
                 className="fuel-select"
             >
                 <option value="gasolina_comum">Gasolina Comum</option>
@@ -73,13 +134,21 @@ function PriceForm({ stationId, onPriceAdded }) {
                     step="0.001"
                     placeholder="0.000"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="price-input"
+                    onChange={(e) => handlePriceChange(e.target.value)}
+                    className={`price-input ${errors.length > 0 ? 'error' : ''}`}
                     required
                 />
             </div>
 
-            <button type="submit" disabled={loading} className="submit-btn">
+            <p className="price-hint">
+                Faixa válida: R$ {currentRange.min.toFixed(2)} - R$ {currentRange.max.toFixed(2)}
+            </p>
+
+            <button
+                type="submit"
+                disabled={loading || errors.length > 0}
+                className="submit-btn"
+            >
                 {loading ? 'Enviando...' : 'Reportar'}
             </button>
         </form>
@@ -93,7 +162,7 @@ function PriceList({ stationId }) {
 
     const fetchPrices = async () => {
         try {
-            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations/${stationId}/latest-prices`);
+            const response = await axios.get(`http://localhost:5000/api/gas-stations/${stationId}/latest-prices`);
             setPrices(response.data);
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
@@ -143,7 +212,7 @@ function App() {
     const fetchGasStations = async (lat, lng) => {
         try {
             console.log('Buscando postos para:', lat, lng);
-            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
+            const response = await axios.get(`http://localhost:5000/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
             console.log('Resposta da API:', response.data);
             setGasStations(response.data);
         } catch (error) {

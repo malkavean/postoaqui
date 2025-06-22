@@ -93,7 +93,7 @@ function PriceList({ stationId }) {
 
     const fetchPrices = async () => {
         try {
-            const response = await axios.get(`http://postoaqui-production.up.railway.app/api/gas-stations/${stationId}/latest-prices`);
+            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations/${stationId}/latest-prices`);
             setPrices(response.data);
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
@@ -143,7 +143,7 @@ function App() {
     const fetchGasStations = async (lat, lng) => {
         try {
             console.log('Buscando postos para:', lat, lng);
-            const response = await axios.get(`http://postoaqui-production.up.railway.app/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
+            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
             console.log('Resposta da API:', response.data);
             setGasStations(response.data);
         } catch (error) {

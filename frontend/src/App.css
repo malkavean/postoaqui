@@ -1,0 +1,134 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.map-container {
+  margin: 20px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.2rem;
+}
+
+/* Estilos para o popup dos postos */
+.station-popup {
+  max-width: 400px;
+}
+
+.station-info {
+  text-align: left;
+}
+
+.station-info h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+/* Formulário de preços */
+.price-form {
+  margin-top: 15px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.price-form h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.fuel-select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.price-input-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.price-input-group span {
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.price-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.submit-btn:hover {
+  background-color: #0056b3;
+}
+
+.submit-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Lista de preços */
+.price-list {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.price-list h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.price-item:last-child {
+  border-bottom: none;
+}
+
+.fuel-type {
+  font-weight: normal;
+}
+
+.price {
+  font-weight: bold;
+  color: #28a745;
+}

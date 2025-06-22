@@ -234,8 +234,8 @@ function EditStationForm({ station, onSave, onCancel }) {
     );
 }
 
-// Componente para o formulário de preços
-function PriceForm({ stationId, onPriceAdded }) {
+// Componente para o formulário de preços (Modal)
+function PriceFormModal({ stationId, stationName, visible, onClose, onPriceAdded }) {
     const [fuelType, setFuelType] = useState('gasolina_comum');
     const [price, setPrice] = useState('');
     const [loading, setLoading] = useState(false);
@@ -308,6 +308,7 @@ function PriceForm({ stationId, onPriceAdded }) {
             });
 
             onPriceAdded();
+            onClose();
         } catch (error) {
             console.error('Erro ao reportar preço:', error);
 
@@ -330,52 +331,82 @@ function PriceForm({ stationId, onPriceAdded }) {
 
     const currentRange = priceRanges[fuelType];
 
+    if (!visible) return null;
+
     return (
-        <div className="price-form">
-            {errors.length > 0 && (
-                <div className="error-messages">
-                    {errors.map((error, index) => (
-                        <p key={index} className="error-message">{error}</p>
-                    ))}
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>Reportar Preço</h3>
+                    <p className="station-name">{stationName}</p>
+                    <button
+                        onClick={onClose}
+                        className="modal-close-btn"
+                        title="Fechar"
+                    >
+                        ❌
+                    </button>
                 </div>
-            )}
 
-            <select
-                value={fuelType}
-                onChange={(e) => handleFuelTypeChange(e.target.value)}
-                className="fuel-select"
-            >
-                <option value="gasolina_comum">Gasolina Comum</option>
-                <option value="gasolina_aditivada">Gasolina Aditivada</option>
-                <option value="etanol">Etanol</option>
-                <option value="diesel">Diesel</option>
-            </select>
+                <form onSubmit={handleSubmit} className="price-form-modal">
+                    {errors.length > 0 && (
+                        <div className="error-messages">
+                            {errors.map((error, index) => (
+                                <p key={index} className="error-message">{error}</p>
+                            ))}
+                        </div>
+                    )}
 
-            <div className="price-input-group">
-                <span>R$</span>
-                <input
-                    type="number"
-                    step="0.001"
-                    placeholder="0.000"
-                    value={price}
-                    onChange={(e) => handlePriceChange(e.target.value)}
-                    className={`price-input ${errors.length > 0 ? 'error' : ''}`}
-                    required
-                />
+                    <label className="form-label">Tipo de Combustível:</label>
+                    <select
+                        value={fuelType}
+                        onChange={(e) => handleFuelTypeChange(e.target.value)}
+                        className="fuel-select"
+                    >
+                        <option value="gasolina_comum">Gasolina Comum</option>
+                        <option value="gasolina_aditivada">Gasolina Aditivada</option>
+                        <option value="etanol">Etanol</option>
+                        <option value="diesel">Diesel</option>
+                    </select>
+
+                    <label className="form-label">Preço (R$):</label>
+                    <div className="price-input-group">
+                        <span>R$</span>
+                        <input
+                            type="number"
+                            step="0.001"
+                            placeholder="0.000"
+                            value={price}
+                            onChange={(e) => handlePriceChange(e.target.value)}
+                            className={`price-input ${errors.length > 0 ? 'error' : ''}`}
+                            required
+                            autoFocus
+                        />
+                    </div>
+
+                    <p className="price-hint">
+                        Faixa válida: R$ {currentRange.min.toFixed(2)} - R$ {currentRange.max.toFixed(2)}
+                    </p>
+
+                    <div className="modal-buttons">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="btn btn-cancel"
+                            disabled={loading}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading || errors.length > 0}
+                            className="btn btn-save"
+                        >
+                            {loading ? 'Enviando...' : 'Reportar Preço'}
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <p className="price-hint">
-                Faixa válida: R$ {currentRange.min.toFixed(2)} - R$ {currentRange.max.toFixed(2)}
-            </p>
-
-            <button
-                type="submit"
-                onClick={handleSubmit}
-                disabled={loading || errors.length > 0}
-                className="submit-btn"
-            >
-                {loading ? 'Enviando...' : 'Reportar'}
-            </button>
         </div>
     );
 }
@@ -439,6 +470,8 @@ function App() {
     const [addingStation, setAddingStation] = useState(false);
     const [newStationPosition, setNewStationPosition] = useState(null);
     const [editingStation, setEditingStation] = useState(null);
+    const [showingPriceForm, setShowingPriceForm] = useState(null);
+    const [selectedStation, setSelectedStation] = useState(null);
 
     const fetchGasStations = async (lat, lng) => {
         try {
@@ -524,16 +557,19 @@ function App() {
         }
     };
 
-    const handleShowPriceForm = (stationId) => {
-        setShowingPriceForm(stationId);
+    const handleShowPriceForm = (station) => {
+        setSelectedStation(station);
+        setShowingPriceForm(station.id);
     };
 
     const handleHidePriceForm = () => {
         setShowingPriceForm(null);
+        setSelectedStation(null);
     };
 
     const handlePriceAdded = () => {
         setShowingPriceForm(null);
+        setSelectedStation(null);
         if (userLocation) {
             fetchGasStations(userLocation[0], userLocation[1]);
         }
@@ -682,7 +718,7 @@ function App() {
                                                             ❌
                                                         </button>
                                                     </div>
-                                                    <PriceForm
+                                                    <PriceFormModal
                                                         stationId={station.id}
                                                         onPriceAdded={handlePriceAdded}
                                                     />
@@ -719,6 +755,15 @@ function App() {
                     )}
                 </MapContainer>
             </div>
+
+            {/* Modal de formulário de preços */}
+            <PriceFormModal
+                stationId={selectedStation?.id}
+                stationName={selectedStation?.name}
+                visible={showingPriceForm !== null}
+                onClose={handleHidePriceForm}
+                onPriceAdded={handlePriceAdded}
+            />
         </div>
     );
 }

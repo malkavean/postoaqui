@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PostoAqui</string>
+    <string name="title_activity_main">PostoAqui</string>
+    <string name="package_name">com.postoaqui.app</string>
+    <string name="custom_url_scheme">com.postoaqui.app</string>
+</resources>

@@ -53,20 +53,153 @@ app.get('/api/gas-stations', async (req, res) => {
     }
 });
 
-// Adicionar novo posto
+// CRUD DE POSTOS DE GASOLINA
+
+// Criar novo posto
 app.post('/api/gas-stations', async (req, res) => {
     const { name, address, latitude, longitude } = req.body;
 
+    // Validações
+    const errors = [];
+
+    if (!name || name.trim().length < 3) {
+        errors.push('Nome do posto deve ter pelo menos 3 caracteres');
+    }
+
+    if (!address || address.trim().length < 10) {
+        errors.push('Endereço deve ter pelo menos 10 caracteres');
+    }
+
+    if (!latitude || !longitude) {
+        errors.push('Localização (latitude e longitude) é obrigatória');
+    }
+
+    if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+        errors.push('Coordenadas inválidas');
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+
     try {
+        // Verificar se já existe um posto muito próximo (menos de 50m)
+        const nearbyQuery = `
+      SELECT id, name,
+      (6371 * acos(cos(radians($1)) * cos(radians(latitude)) * 
+       cos(radians(longitude) - radians($2)) + sin(radians($1)) * 
+       sin(radians(latitude)))) * 1000 AS distance_meters
+      FROM gas_stations 
+      WHERE (6371 * acos(cos(radians($1)) * cos(radians(latitude)) * 
+             cos(radians(longitude) - radians($2)) + sin(radians($1)) * 
+             sin(radians(latitude)))) * 1000 < 50
+    `;
+
+        const nearbyResult = await pool.query(nearbyQuery, [latitude, longitude]);
+
+        if (nearbyResult.rows.length > 0) {
+            return res.status(400).json({
+                errors: [`Já existe um posto muito próximo: ${nearbyResult.rows[0].name}`]
+            });
+        }
+
         const result = await pool.query(
             'INSERT INTO gas_stations (name, address, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, address, latitude, longitude]
+            [name.trim(), address.trim(), latitude, longitude]
         );
-        res.json(result.rows[0]);
+
+        res.status(201).json(result.rows[0]);
     } catch (err) {
+        console.error('Erro ao criar posto:', err);
         res.status(500).json({ error: err.message });
     }
 });
+
+// Atualizar posto existente
+app.put('/api/gas-stations/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, address, latitude, longitude } = req.body;
+
+    // Validações similares ao POST
+    const errors = [];
+
+    if (!name || name.trim().length < 3) {
+        errors.push('Nome do posto deve ter pelo menos 3 caracteres');
+    }
+
+    if (!address || address.trim().length < 10) {
+        errors.push('Endereço deve ter pelo menos 10 caracteres');
+    }
+
+    if (!latitude || !longitude) {
+        errors.push('Localização (latitude e longitude) é obrigatória');
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+
+    try {
+        const result = await pool.query(
+            'UPDATE gas_stations SET name = $1, address = $2, latitude = $3, longitude = $4 WHERE id = $5 RETURNING *',
+            [name.trim(), address.trim(), latitude, longitude, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Posto não encontrado' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Erro ao atualizar posto:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Deletar posto
+app.delete('/api/gas-stations/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Primeiro deletar todos os preços relacionados
+        await pool.query('DELETE FROM prices WHERE gas_station_id = $1', [id]);
+
+        // Depois deletar o posto
+        const result = await pool.query(
+            'DELETE FROM gas_stations WHERE id = $1 RETURNING *',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Posto não encontrado' });
+        }
+
+        res.json({ message: 'Posto deletado com sucesso', station: result.rows[0] });
+    } catch (err) {
+        console.error('Erro ao deletar posto:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Buscar posto específico por ID
+app.get('/api/gas-stations/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('SELECT * FROM gas_stations WHERE id = $1', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Posto não encontrado' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Erro ao buscar posto:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 
 // Buscar preços de um posto
 app.get('/api/gas-stations/:id/prices', async (req, res) => {

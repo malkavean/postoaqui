@@ -317,3 +317,61 @@
 .btn-icon.edit:hover {
   background-color: #e3f2fd;
 }
+/* Botão reportar preço */
+.report-price-btn {
+  width: 100%;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+.report-price-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Container do formulário de preços */
+.price-form-container {
+  margin-top: 15px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.price-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.price-form-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.btn-close:hover {
+  background-color: #f0f0f0;
+}
+
+/* Ajustar formulário para não ter título duplicado */
+.price-form h4 {
+  display: none;
+}

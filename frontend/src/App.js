@@ -331,9 +331,7 @@ function PriceForm({ stationId, onPriceAdded }) {
     const currentRange = priceRanges[fuelType];
 
     return (
-        <form onSubmit={handleSubmit} className="price-form">
-            <h4>Reportar Preço</h4>
-
+        <div className="price-form">
             {errors.length > 0 && (
                 <div className="error-messages">
                     {errors.map((error, index) => (
@@ -372,12 +370,13 @@ function PriceForm({ stationId, onPriceAdded }) {
 
             <button
                 type="submit"
+                onClick={handleSubmit}
                 disabled={loading || errors.length > 0}
                 className="submit-btn"
             >
                 {loading ? 'Enviando...' : 'Reportar'}
             </button>
-        </form>
+        </div>
     );
 }
 
@@ -525,6 +524,21 @@ function App() {
         }
     };
 
+    const handleShowPriceForm = (stationId) => {
+        setShowingPriceForm(stationId);
+    };
+
+    const handleHidePriceForm = () => {
+        setShowingPriceForm(null);
+    };
+
+    const handlePriceAdded = () => {
+        setShowingPriceForm(null);
+        if (userLocation) {
+            fetchGasStations(userLocation[0], userLocation[1]);
+        }
+    };
+
     const handleDeleteStation = async (station) => {
         if (window.confirm(`Tem certeza que deseja deletar o posto "${station.name}"?`)) {
             const loadingToast = toast.loading('Deletando posto...');
@@ -656,10 +670,31 @@ function App() {
 
                                             <PriceList stationId={station.id} />
 
-                                            <PriceForm
-                                                stationId={station.id}
-                                                onPriceAdded={() => window.location.reload()}
-                                            />
+                                            {showingPriceForm === station.id ? (
+                                                <div className="price-form-container">
+                                                    <div className="price-form-header">
+                                                        <h4>Reportar Preço</h4>
+                                                        <button
+                                                            onClick={handleHidePriceForm}
+                                                            className="btn-close"
+                                                            title="Fechar formulário"
+                                                        >
+                                                            ❌
+                                                        </button>
+                                                    </div>
+                                                    <PriceForm
+                                                        stationId={station.id}
+                                                        onPriceAdded={handlePriceAdded}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleShowPriceForm(station.id)}
+                                                    className="report-price-btn"
+                                                >
+                                                    📝 Reportar Preço
+                                                </button>
+                                            )}
                                         </>
                                     )}
                                 </div>

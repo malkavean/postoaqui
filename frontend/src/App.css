@@ -164,3 +164,16 @@
   background-color: #6c757d;
   cursor: not-allowed;
 }
+
+/* Customizações extras para toasts */
+.toast-success {
+  border-left: 4px solid #4ade80;
+}
+
+.toast-error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-loading {
+  border-left: 4px solid #3b82f6;
+}

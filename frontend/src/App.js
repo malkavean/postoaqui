@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 import './App.css';
 
 // Fix para ícones do Leaflet
@@ -79,6 +80,10 @@ function PriceForm({ stationId, onPriceAdded }) {
         }
 
         setLoading(true);
+
+        // Toast de loading
+        const loadingToast = toast.loading('Reportando preço...');
+
         try {
             await axios.post('https://postoaqui-production.up.railway.app/api/prices', {
                 gas_station_id: stationId,
@@ -88,14 +93,30 @@ function PriceForm({ stationId, onPriceAdded }) {
 
             setPrice('');
             setErrors([]);
-            alert('Preço reportado com sucesso!');
+
+            // Toast de sucesso
+            toast.success('Preço reportado com sucesso! 🎉', {
+                id: loadingToast,
+                duration: 3000
+            });
+
             onPriceAdded(); // Atualizar os preços
         } catch (error) {
             console.error('Erro ao reportar preço:', error);
+
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
+                // Toast de erro com detalhes
+                toast.error(`Erro: ${error.response.data.errors[0]}`, {
+                    id: loadingToast,
+                    duration: 4000
+                });
             } else {
-                alert('Erro ao reportar preço');
+                // Toast de erro genérico
+                toast.error('Erro ao reportar preço. Tente novamente.', {
+                    id: loadingToast,
+                    duration: 4000
+                });
             }
         } finally {
             setLoading(false);
@@ -162,7 +183,7 @@ function PriceList({ stationId }) {
 
     const fetchPrices = async () => {
         try {
-            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations/${stationId}/latest-prices`);
+            const response = await axios.get(`http://localhost:5000/api/gas-stations/${stationId}/latest-prices`);
             setPrices(response.data);
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
@@ -212,7 +233,7 @@ function App() {
     const fetchGasStations = async (lat, lng) => {
         try {
             console.log('Buscando postos para:', lat, lng);
-            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
+            const response = await axios.get(`http://localhost:5000/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
             console.log('Resposta da API:', response.data);
             setGasStations(response.data);
         } catch (error) {
@@ -232,6 +253,9 @@ function App() {
                 },
                 (error) => {
                     console.error('Erro ao obter localização:', error);
+                    toast.error('Não foi possível obter sua localização. Usando São Paulo como padrão.', {
+                        duration: 4000
+                    });
                     // Localização padrão (São Paulo)
                     const coords = [-23.5505, -46.6333];
                     setUserLocation(coords);
@@ -254,6 +278,30 @@ function App() {
 
     return (
         <div className="App">
+            <Toaster
+                position="top-center"
+                toastOptions={{
+                    duration: 3000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                    },
+                    success: {
+                        style: {
+                            background: '#4ade80',
+                            color: '#fff',
+                        },
+                    },
+                    error: {
+                        style: {
+                            background: '#ef4444',
+                            color: '#fff',
+                        },
+                    },
+                }}
+            />
+
             <header className="App-header">
                 <h1>PostoAqui</h1>
                 <p>Encontre os melhores preços de combustível perto de você</p>

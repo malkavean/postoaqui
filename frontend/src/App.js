@@ -236,6 +236,8 @@ function EditStationForm({ station, onSave, onCancel }) {
 
 // Componente para o formulário de preços (Modal)
 function PriceFormModal({ stationId, stationName, visible, onClose, onPriceAdded }) {
+    console.log('PriceFormModal recebeu stationId:', stationId);
+
     const [fuelType, setFuelType] = useState('gasolina_comum');
     const [price, setPrice] = useState('');
     const [loading, setLoading] = useState(false);
@@ -291,6 +293,13 @@ function PriceFormModal({ stationId, stationName, visible, onClose, onPriceAdded
 
         setLoading(true);
         const loadingToast = toast.loading('Reportando preço...');
+
+        // PARA DEBUG
+        console.log('Enviando dados:', {
+            gas_station_id: stationId,
+            fuel_type: fuelType,
+            price: parseFloat(price)
+        });
 
         try {
             await axios.post('https://postoaqui-production.up.railway.app/api/prices', {
@@ -418,8 +427,8 @@ function PriceList({ stationId }) {
 
     const fetchPrices = async () => {
         try {
-            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations/${stationId}/latest-prices`);
-            setPrices(response.data);
+            const timestamp = Date.now();
+            const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations/${stationId}/latest-prices?t=${timestamp}`);             setPrices(response.data);
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
             toast.error('Erro ao carregar preços do posto', {
@@ -558,6 +567,8 @@ function App() {
     };
 
     const handleShowPriceForm = (station) => {
+        console.log('handleShowPriceForm chamada com:', station);
+        console.log('station.id:', station.id);
         setSelectedStation(station);
         setShowingPriceForm(station.id);
     };
@@ -570,9 +581,11 @@ function App() {
     const handlePriceAdded = () => {
         setShowingPriceForm(null);
         setSelectedStation(null);
+        setTimeout(() => {
         if (userLocation) {
             fetchGasStations(userLocation[0], userLocation[1]);
         }
+    }, 1000)
     };
 
     const handleDeleteStation = async (station) => {
@@ -725,7 +738,8 @@ function App() {
                                                 </div>
                                             ) : (
                                                 <button
-                                                    onClick={() => handleShowPriceForm(station.id)}
+
+                                                    onClick={() => handleShowPriceForm(station)}
                                                     className="report-price-btn"
                                                 >
                                                     📝 Reportar Preço
@@ -758,7 +772,7 @@ function App() {
 
             {/* Modal de formulário de preços */}
             <PriceFormModal
-                stationId={selectedStation?.id}
+                stationId={showingPriceForm}
                 stationName={selectedStation?.name}
                 visible={showingPriceForm !== null}
                 onClose={handleHidePriceForm}

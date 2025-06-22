@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import axios from 'axios';
@@ -23,6 +23,216 @@ const gasStationIcon = new L.Icon({
     popupAnchor: [1, -34],
     shadowSize: [41, 41]
 });
+
+// Ícone para novo posto
+const newStationIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+// Componente para gerenciar cliques no mapa
+function MapClickHandler({ onMapClick, addingStation }) {
+    useMapEvents({
+        click(e) {
+            if (addingStation) {
+                onMapClick(e.latlng);
+            }
+        },
+    });
+
+    return null;
+}
+
+// Componente para formulário de novo posto
+function NewStationForm({ position, onSave, onCancel }) {
+    const [name, setName] = useState('');
+    const [address, setAddress] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!name.trim() || !address.trim()) {
+            toast.error('Nome e endereço são obrigatórios');
+            return;
+        }
+
+        setLoading(true);
+        const loadingToast = toast.loading('Criando posto...');
+
+        try {
+            await axios.post('https://postoaqui-production.up.railway.app/api/gas-stations', {
+                name: name.trim(),
+                address: address.trim(),
+                latitude: position.lat,
+                longitude: position.lng
+            });
+
+            toast.success('Posto criado com sucesso! 🎉', {
+                id: loadingToast,
+                duration: 3000
+            });
+
+            onSave();
+        } catch (error) {
+            console.error('Erro ao criar posto:', error);
+            if (error.response?.data?.errors) {
+                toast.error(`Erro: ${error.response.data.errors[0]}`, {
+                    id: loadingToast,
+                    duration: 4000
+                });
+            } else {
+                toast.error('Erro ao criar posto. Tente novamente.', {
+                    id: loadingToast,
+                    duration: 4000
+                });
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="new-station-form">
+            <h4>Novo Posto de Gasolina</h4>
+            <p className="coordinates">
+                📍 Lat: {position.lat.toFixed(6)}, Lng: {position.lng.toFixed(6)}
+            </p>
+
+            <input
+                type="text"
+                placeholder="Nome do posto (ex: Posto Shell Centro)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="form-input"
+                required
+            />
+
+            <input
+                type="text"
+                placeholder="Endereço completo"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="form-input"
+                required
+            />
+
+            <div className="form-buttons">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="btn btn-cancel"
+                    disabled={loading}
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    className="btn btn-save"
+                    disabled={loading}
+                >
+                    {loading ? 'Salvando...' : 'Salvar Posto'}
+                </button>
+            </div>
+        </form>
+    );
+}
+
+// Componente para editar posto
+function EditStationForm({ station, onSave, onCancel }) {
+    const [name, setName] = useState(station.name);
+    const [address, setAddress] = useState(station.address);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!name.trim() || !address.trim()) {
+            toast.error('Nome e endereço são obrigatórios');
+            return;
+        }
+
+        setLoading(true);
+        const loadingToast = toast.loading('Atualizando posto...');
+
+        try {
+            await axios.put(`https://postoaqui-production.up.railway.app/api/gas-stations/${station.id}`, {
+                name: name.trim(),
+                address: address.trim(),
+                latitude: parseFloat(station.latitude),
+                longitude: parseFloat(station.longitude)
+            });
+
+            toast.success('Posto atualizado com sucesso! ✅', {
+                id: loadingToast,
+                duration: 3000
+            });
+
+            onSave();
+        } catch (error) {
+            console.error('Erro ao atualizar posto:', error);
+            if (error.response?.data?.errors) {
+                toast.error(`Erro: ${error.response.data.errors[0]}`, {
+                    id: loadingToast,
+                    duration: 4000
+                });
+            } else {
+                toast.error('Erro ao atualizar posto. Tente novamente.', {
+                    id: loadingToast,
+                    duration: 4000
+                });
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="edit-station-form">
+            <h4>Editar Posto</h4>
+
+            <input
+                type="text"
+                placeholder="Nome do posto"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="form-input"
+                required
+            />
+
+            <input
+                type="text"
+                placeholder="Endereço completo"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="form-input"
+                required
+            />
+
+            <div className="form-buttons">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="btn btn-cancel"
+                    disabled={loading}
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    className="btn btn-save"
+                    disabled={loading}
+                >
+                    {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+            </div>
+        </form>
+    );
+}
 
 // Componente para o formulário de preços
 function PriceForm({ stationId, onPriceAdded }) {
@@ -80,8 +290,6 @@ function PriceForm({ stationId, onPriceAdded }) {
         }
 
         setLoading(true);
-
-        // Toast de loading
         const loadingToast = toast.loading('Reportando preço...');
 
         try {
@@ -94,25 +302,22 @@ function PriceForm({ stationId, onPriceAdded }) {
             setPrice('');
             setErrors([]);
 
-            // Toast de sucesso
             toast.success('Preço reportado com sucesso! 🎉', {
                 id: loadingToast,
                 duration: 3000
             });
 
-            onPriceAdded(); // Atualizar os preços
+            onPriceAdded();
         } catch (error) {
             console.error('Erro ao reportar preço:', error);
 
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
-                // Toast de erro com detalhes
                 toast.error(`Erro: ${error.response.data.errors[0]}`, {
                     id: loadingToast,
                     duration: 4000
                 });
             } else {
-                // Toast de erro genérico
                 toast.error('Erro ao reportar preço. Tente novamente.', {
                     id: loadingToast,
                     duration: 4000
@@ -187,6 +392,9 @@ function PriceList({ stationId }) {
             setPrices(response.data);
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
+            toast.error('Erro ao carregar preços do posto', {
+                duration: 3000
+            });
         } finally {
             setLoading(false);
         }
@@ -229,6 +437,9 @@ function App() {
     const [userLocation, setUserLocation] = useState(null);
     const [gasStations, setGasStations] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [addingStation, setAddingStation] = useState(false);
+    const [newStationPosition, setNewStationPosition] = useState(null);
+    const [editingStation, setEditingStation] = useState(null);
 
     const fetchGasStations = async (lat, lng) => {
         try {
@@ -236,13 +447,27 @@ function App() {
             const response = await axios.get(`https://postoaqui-production.up.railway.app/api/gas-stations?lat=${lat}&lng=${lng}&radius=300`);
             console.log('Resposta da API:', response.data);
             setGasStations(response.data);
+
+            if (response.data.length === 0) {
+                toast('Nenhum posto encontrado na região', {
+                    icon: '⛽',
+                    duration: 3000
+                });
+            } else {
+                toast.success(`${response.data.length} posto(s) encontrado(s)`, {
+                    duration: 2000
+                });
+            }
+
         } catch (error) {
             console.error('Erro ao buscar postos:', error);
+            toast.error('Erro ao carregar postos da região', {
+                duration: 4000
+            });
         }
     };
 
     useEffect(() => {
-        // Pegar localização do usuário
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -256,7 +481,6 @@ function App() {
                     toast.error('Não foi possível obter sua localização. Usando São Paulo como padrão.', {
                         duration: 4000
                     });
-                    // Localização padrão (São Paulo)
                     const coords = [-23.5505, -46.6333];
                     setUserLocation(coords);
                     fetchGasStations(coords[0], coords[1]);
@@ -264,13 +488,67 @@ function App() {
                 }
             );
         } else {
-            // Fallback se geolocalização não disponível
             const coords = [-23.5505, -46.6333];
             setUserLocation(coords);
             fetchGasStations(coords[0], coords[1]);
             setLoading(false);
         }
     }, []);
+
+    const handleMapClick = (latlng) => {
+        if (addingStation) {
+            setNewStationPosition(latlng);
+        }
+    };
+
+    const handleSaveNewStation = () => {
+        setNewStationPosition(null);
+        setAddingStation(false);
+        if (userLocation) {
+            fetchGasStations(userLocation[0], userLocation[1]);
+        }
+    };
+
+    const handleCancelNewStation = () => {
+        setNewStationPosition(null);
+        setAddingStation(false);
+    };
+
+    const handleEditStation = (station) => {
+        setEditingStation(station);
+    };
+
+    const handleSaveEditStation = () => {
+        setEditingStation(null);
+        if (userLocation) {
+            fetchGasStations(userLocation[0], userLocation[1]);
+        }
+    };
+
+    const handleDeleteStation = async (station) => {
+        if (window.confirm(`Tem certeza que deseja deletar o posto "${station.name}"?`)) {
+            const loadingToast = toast.loading('Deletando posto...');
+
+            try {
+                await axios.delete(`https://postoaqui-production.up.railway.app/api/gas-stations/${station.id}`);
+
+                toast.success('Posto deletado com sucesso! 🗑️', {
+                    id: loadingToast,
+                    duration: 3000
+                });
+
+                if (userLocation) {
+                    fetchGasStations(userLocation[0], userLocation[1]);
+                }
+            } catch (error) {
+                console.error('Erro ao deletar posto:', error);
+                toast.error('Erro ao deletar posto. Tente novamente.', {
+                    id: loadingToast,
+                    duration: 4000
+                });
+            }
+        }
+    };
 
     if (loading) {
         return <div className="loading">Carregando mapa...</div>;
@@ -305,7 +583,18 @@ function App() {
             <header className="App-header">
                 <h1>PostoAqui</h1>
                 <p>Encontre os melhores preços de combustível perto de você</p>
-                <p>Postos encontrados: {gasStations.length}</p>
+                <div className="header-stats">
+                    <span>Postos encontrados: {gasStations.length}</span>
+                    <button
+                        onClick={() => setAddingStation(!addingStation)}
+                        className={`add-station-btn ${addingStation ? 'active' : ''}`}
+                    >
+                        {addingStation ? '❌ Cancelar' : '➕ Adicionar Posto'}
+                    </button>
+                </div>
+                {addingStation && (
+                    <p className="add-instruction">📍 Clique no mapa onde deseja adicionar o posto</p>
+                )}
             </header>
 
             <div className="map-container">
@@ -319,12 +608,14 @@ function App() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
 
+                    <MapClickHandler onMapClick={handleMapClick} addingStation={addingStation} />
+
                     {/* Marker do usuário */}
                     <Marker position={userLocation}>
                         <Popup>Você está aqui!</Popup>
                     </Marker>
 
-                    {/* Markers dos postos */}
+                    {/* Markers dos postos existentes */}
                     {gasStations.map((station) => (
                         <Marker
                             key={station.id}
@@ -333,20 +624,64 @@ function App() {
                         >
                             <Popup maxWidth={400} className="station-popup">
                                 <div className="station-info">
-                                    <h3>{station.name}</h3>
-                                    <p>{station.address}</p>
-                                    <p>Distância: {station.distance.toFixed(2)} km</p>
+                                    {editingStation && editingStation.id === station.id ? (
+                                        <EditStationForm
+                                            station={editingStation}
+                                            onSave={handleSaveEditStation}
+                                            onCancel={() => setEditingStation(null)}
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="station-header">
+                                                <h3>{station.name}</h3>
+                                                <div className="station-actions">
+                                                    <button
+                                                        onClick={() => handleEditStation(station)}
+                                                        className="btn-icon edit"
+                                                        title="Editar posto"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteStation(station)}
+                                                        className="btn-icon delete"
+                                                        title="Deletar posto"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <p>{station.address}</p>
+                                            <p>Distância: {station.distance.toFixed(2)} km</p>
 
-                                    <PriceList stationId={station.id} />
+                                            <PriceList stationId={station.id} />
 
-                                    <PriceForm
-                                        stationId={station.id}
-                                        onPriceAdded={() => window.location.reload()}
-                                    />
+                                            <PriceForm
+                                                stationId={station.id}
+                                                onPriceAdded={() => window.location.reload()}
+                                            />
+                                        </>
+                                    )}
                                 </div>
                             </Popup>
                         </Marker>
                     ))}
+
+                    {/* Marker para novo posto */}
+                    {newStationPosition && (
+                        <Marker
+                            position={[newStationPosition.lat, newStationPosition.lng]}
+                            icon={newStationIcon}
+                        >
+                            <Popup maxWidth={400} className="station-popup">
+                                <NewStationForm
+                                    position={newStationPosition}
+                                    onSave={handleSaveNewStation}
+                                    onCancel={handleCancelNewStation}
+                                />
+                            </Popup>
+                        </Marker>
+                    )}
                 </MapContainer>
             </div>
         </div>
